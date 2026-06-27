@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
@@ -16,9 +17,9 @@ function App() {
           <img src={viteLogo} className="vite" alt="Vite logo" />
         </div>
         <div>
-          <h1>Get started</h1>
+          <h1>arena nefa</h1>
           <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+            <Link to="/copa2026">🏆 Bolão Copa 2026 →</Link>
           </p>
         </div>
         <button
