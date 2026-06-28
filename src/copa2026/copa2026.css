@@ -1,8 +1,21 @@
+/* Self-contained light theme — the rest of the app follows the OS dark/light
+   scheme, but this page is always light so the white cards/inputs stay legible. */
+.copa-page {
+  color-scheme: light;
+  background: #fff;
+  color: #1a1a2e;
+  min-height: 100vh;
+}
 .copa {
   max-width: 860px;
   margin: 0 auto;
   padding: 1.5rem 1rem 4rem;
   font-family: system-ui, -apple-system, sans-serif;
+  color: #1a1a2e;
+}
+/* index.css colors h1/h2 with theme vars that flip in dark mode — pin them. */
+.copa h1,
+.copa h2 {
   color: #1a1a2e;
 }
 .copa-header {
@@ -36,6 +49,7 @@
 .tabs button {
   border: 1px solid #d1d5db;
   background: #fff;
+  color: #1a1a2e;
   padding: 0.5rem 0.9rem;
   border-radius: 999px;
   cursor: pointer;
@@ -136,6 +150,8 @@
   padding: 0.35rem 0.5rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
+  background: #fff;
+  color: #1a1a2e;
 }
 .bet-row {
   display: grid;

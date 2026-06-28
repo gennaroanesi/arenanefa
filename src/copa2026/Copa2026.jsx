@@ -63,10 +63,11 @@ export default function Copa2026() {
   );
 
   // Leaderboard: total points + tier breakdown per profile.
+  // big = 3-pt hits (knockout goal difference); small = 1-pt hits (result).
   const standings = useMemo(() => {
     if (!pool) return [];
     const byProfile = Object.fromEntries(
-      pool.profiles.map((p) => [p.id, { profile: p, points: 0, exact: 0, result: 0, played: 0 }]),
+      pool.profiles.map((p) => [p.id, { profile: p, points: 0, big: 0, small: 0, played: 0 }]),
     );
     for (const bet of pool.bets) {
       const row = byProfile[bet.profileId];
@@ -76,11 +77,11 @@ export default function Copa2026() {
       if (pts == null) continue; // match not scored yet
       row.points += pts;
       row.played += 1;
-      if (pts === SCORING.exact) row.exact += 1;
-      else if (pts === SCORING.result) row.result += 1;
+      if (pts === 3) row.big += 1;
+      else if (pts === 1) row.small += 1;
     }
     return Object.values(byProfile).sort(
-      (a, b) => b.points - a.points || b.exact - a.exact || a.profile.displayName.localeCompare(b.profile.displayName),
+      (a, b) => b.points - a.points || b.big - a.big || a.profile.displayName.localeCompare(b.profile.displayName),
     );
   }, [pool, matchesById]);
 
@@ -138,15 +139,18 @@ export default function Copa2026() {
 
 function Shell({ children }) {
   return (
+    <div className="copa-page">
     <div className="copa">
       <header className="copa-header">
         <Link to="/" className="back">← arena nefa</Link>
         <h1>Bolão Copa 2026 🏆</h1>
         <p className="rules">
-          Placar exato = {SCORING.exact} pts · acertou o resultado = {SCORING.result} pt
+          Grupos: {SCORING.group.result} pt no resultado · Mata-mata: {SCORING.knockout.gd} pts no
+          saldo de gols, {SCORING.knockout.result} pt no resultado
         </p>
       </header>
       {children}
+    </div>
     </div>
   );
 }
@@ -160,8 +164,8 @@ function Leaderboard({ standings }) {
           <th>#</th>
           <th>Nome</th>
           <th>Pontos</th>
-          <th>Exatos</th>
-          <th>Resultados</th>
+          <th title="Acertos de 3 pts (saldo de gols no mata-mata)">3 pts</th>
+          <th title="Acertos de 1 pt (resultado)">1 pt</th>
           <th>Jogos</th>
         </tr>
       </thead>
@@ -171,8 +175,8 @@ function Leaderboard({ standings }) {
             <td>{i + 1}</td>
             <td>{r.profile.displayName}</td>
             <td className="pts">{r.points}</td>
-            <td>{r.exact}</td>
-            <td>{r.result}</td>
+            <td>{r.big}</td>
+            <td>{r.small}</td>
             <td>{r.played}</td>
           </tr>
         ))}
