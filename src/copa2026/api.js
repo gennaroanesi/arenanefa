@@ -27,11 +27,10 @@ export async function createProfile(displayName, startingPoints = 0) {
   return res.data;
 }
 
-export async function upsertBet({ id, profileId, matchId, predHome, predAway }) {
-  const input = { profileId, matchId, predHome, predAway };
+export async function upsertBet({ id, profileId, matchId, pick }) {
   const res = id
-    ? await client.models.Bet.update({ id, predHome, predAway })
-    : await client.models.Bet.create(input);
+    ? await client.models.Bet.update({ id, pick })
+    : await client.models.Bet.create({ profileId, matchId, pick });
   if (res.errors?.length) throw new Error(res.errors.map((e) => e.message).join("; "));
   return res.data;
 }

@@ -51,13 +51,17 @@ const schema = a
     }),
 
     // ── Bet ─────────────────────────────────────────────────────────────
-    // One per person per match: an exact-scoreline prediction.
+    // One per person per match. Knockout bet = who advances + how:
+    // `pick` is "A:<cond>" or "B:<cond>" where A=home, B=away and cond is
+    // P (penalties) / 1 / 2 / 3 (3 = "3+ goals"). Scoring: 3 pts right
+    // qualifier + exact condition, 1 pt right qualifier wrong condition, else 0.
     Bet: a.model({
       profileId: a.id().required(),
       matchId: a.id().required(),
-      predHome: a.integer().required(),
-      predAway: a.integer().required(),
-      // Optional helper for knockout ties; unused while bets are scoreline-only.
+      pick: a.string(),
+      // Legacy scoreline fields — optional, unused by the condition model.
+      predHome: a.integer(),
+      predAway: a.integer(),
       predAdvancer: a.string(),
       profile: a.belongsTo("Profile", "profileId"),
       match: a.belongsTo("Match", "matchId"),

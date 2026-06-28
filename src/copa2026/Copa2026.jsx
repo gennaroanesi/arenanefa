@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { loadPool, upsertBet, createProfile } from "./api";
-import { scoreBet, SCORING, NEWCOMER_BONUS } from "./scoring";
-import { nameFor } from "./teams";
+import { scoreBet, CONDS, BASE_FLOOR } from "./scoring";
+import { nameFor, flagFor } from "./teams";
 import BracketView from "./BracketView";
 import "./copa2026.css";
 
@@ -32,6 +32,15 @@ function isOpen(match) {
 
 function teamLabel(code) {
   return code && code.trim() ? nameFor(code) : "A definir";
+}
+
+// "A:2" → "🇧🇷 BRA (2)" — advancer + condition.
+function pickLabel(pick, match) {
+  if (!pick) return "—";
+  const [side, cond] = pick.split(":");
+  const code = side === "A" ? match.homeTeam : match.awayTeam;
+  const short = cond === "P" ? "pên" : cond === "3" ? "3+" : cond;
+  return `${flagFor(code)} ${code ?? "?"} (${short})`;
 }
 
 export default function Copa2026() {
@@ -149,8 +158,7 @@ function Shell({ children }) {
         <Link to="/" className="back">← arena nefa</Link>
         <h1>Bolão Copa 2026 🏆</h1>
         <p className="rules">
-          Grupos: {SCORING.group.result} pt no resultado · Mata-mata: {SCORING.knockout.gd} pts no
-          saldo de gols, {SCORING.knockout.result} pt no resultado
+          Mata-mata · 1 pt no classificado · 3 pts cravando a condição (P / 1 / 2 / 3+)
         </p>
       </header>
       {children}
@@ -168,8 +176,8 @@ function Leaderboard({ standings }) {
           <th>#</th>
           <th>Nome</th>
           <th>Pontos</th>
-          <th title="Acertos de 3 pts (saldo de gols no mata-mata)">3 pts</th>
-          <th title="Acertos de 1 pt (resultado)">1 pt</th>
+          <th title="Cravou classificado + condição (3 pts)">Cheios</th>
+          <th title="Acertou só o classificado (1 pt)">Parciais</th>
           <th>Jogos</th>
         </tr>
       </thead>
@@ -178,12 +186,10 @@ function Leaderboard({ standings }) {
           <tr key={r.profile.id}>
             <td>{i + 1}</td>
             <td>
-              {r.profile.displayName}
-              {r.profile.startingPoints > 0 && (
-                <span className="novato" title={`Novato · começou com ${r.profile.startingPoints} pts`}>
-                  +{r.profile.startingPoints}
-                </span>
-              )}
+              <div className="lb-name">{r.profile.displayName}</div>
+              <div className="lb-sub">
+                grupos {r.profile.startingPoints ?? 0} · mata +{r.points - (r.profile.startingPoints ?? 0)}
+              </div>
             </td>
             <td className="pts">{r.points}</td>
             <td>{r.big}</td>
@@ -242,9 +248,7 @@ function MatchCard({ match, bets, profilesById }) {
             .map(({ b, pts }) => (
               <li key={b.id}>
                 <span>{profilesById[b.profileId]?.displayName ?? "?"}</span>
-                <span>
-                  {b.predHome} – {b.predAway}
-                </span>
+                <span>{pickLabel(b.pick, match)}</span>
                 <span className="pts">{pts == null ? "" : `${pts} pt`}</span>
               </li>
             ))}
@@ -255,32 +259,76 @@ function MatchCard({ match, bets, profilesById }) {
   );
 }
 
+// One match's pick row: home team + its condition buttons, then away.
+// A pick is "A:<cond>" (home advances) or "B:<cond>" (away advances).
+function PickRow({ match, value, onPick }) {
+  const known = !!match.homeTeam && !!match.awayTeam;
+  const sideBtns = (side, conds) =>
+    conds.map(({ v, label }) => {
+      const val = side + ":" + v;
+      return (
+        <button
+          key={val}
+          type="button"
+          disabled={!known}
+          className={"pick-btn" + (value === val ? " on" : "")}
+          onClick={() => onPick(val)}
+        >
+          {label}
+        </button>
+      );
+    });
+  return (
+    <div className="pick-match">
+      <div className="pick-when">
+        {STAGE_LABEL[match.stage]} · {teamLabel(match.homeTeam)} vs {teamLabel(match.awayTeam)}
+      </div>
+      <div className="pick-sides">
+        <div className="pick-side">
+          <div className="pick-team">
+            <span>{flagFor(match.homeTeam)}</span>
+            <span className="pick-name">{teamLabel(match.homeTeam)}</span>
+          </div>
+          <div className="pick-btns">{sideBtns("A", CONDS)}</div>
+        </div>
+        <div className="pick-side">
+          <div className="pick-team pick-team-r">
+            <span className="pick-name">{teamLabel(match.awayTeam)}</span>
+            <span>{flagFor(match.awayTeam)}</span>
+          </div>
+          <div className="pick-btns">{sideBtns("B", [...CONDS].reverse())}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MyBets({ pool, matchesByStage, onSaved }) {
   const [profileId, setProfileId] = useState("");
-  const [drafts, setDrafts] = useState({}); // matchId -> {home, away}
+  const [drafts, setDrafts] = useState({}); // matchId -> pick string
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
   const [newName, setNewName] = useState("");
+  const [newBase, setNewBase] = useState("");
   const [joining, setJoining] = useState(false);
 
   async function joinAsNew() {
     const name = newName.trim();
     if (!name) return;
-    const taken = pool.profiles.some(
-      (p) => p.displayName.toLowerCase() === name.toLowerCase(),
-    );
-    if (taken) {
+    if (pool.profiles.some((p) => p.displayName.toLowerCase() === name.toLowerCase())) {
       setMsg("Esse nome já existe — selecione-o na lista.");
       return;
     }
+    const base = Math.max(BASE_FLOOR, parseInt(newBase, 10) || BASE_FLOOR);
     setJoining(true);
     setMsg(null);
     try {
-      const created = await createProfile(name, NEWCOMER_BONUS);
+      const created = await createProfile(name, base);
       await onSaved(); // reload pool so the new profile shows up
       setProfileId(created.id);
       setNewName("");
-      setMsg(`Bem-vindo, ${name}! Você começa com ${NEWCOMER_BONUS} pts.`);
+      setNewBase("");
+      setMsg(`Bem-vindo, ${name}! Você começa com ${base} pts.`);
     } catch (e) {
       setMsg("Erro: " + (e.message ?? String(e)));
     } finally {
@@ -294,29 +342,34 @@ function MyBets({ pool, matchesByStage, onSaved }) {
     return map;
   }, [pool, profileId]);
 
+  // Open knockout matches: both teams known and not yet decided.
   const openMatches = useMemo(
     () =>
       STAGES.flatMap((s) => matchesByStage[s.key] ?? [])
-        .filter(isOpen)
+        .filter((m) => isOpen(m) && m.homeTeam && m.awayTeam)
         .sort(matchSort),
     [matchesByStage],
   );
 
-  function setDraft(matchId, side, value) {
-    setDrafts((d) => ({ ...d, [matchId]: { ...d[matchId], [side]: value } }));
+  function setPick(matchId, val) {
+    setDrafts((d) => {
+      const cur = d[matchId] ?? myBets[matchId]?.pick;
+      const next = { ...d };
+      if (cur === val) next[matchId] = ""; // toggle off
+      else next[matchId] = val;
+      return next;
+    });
   }
 
   async function save() {
     setSaving(true);
     setMsg(null);
     try {
-      const edits = Object.entries(drafts).filter(([, v]) => v.home !== undefined || v.away !== undefined);
-      for (const [matchId, v] of edits) {
+      for (const [matchId, pick] of Object.entries(drafts)) {
         const existing = myBets[matchId];
-        const predHome = Number(v.home ?? existing?.predHome);
-        const predAway = Number(v.away ?? existing?.predAway);
-        if (Number.isNaN(predHome) || Number.isNaN(predAway)) continue;
-        await upsertBet({ id: existing?.id, profileId, matchId, predHome, predAway });
+        if (!pick) continue; // skip cleared (kept simple: no delete)
+        if (existing && existing.pick === pick) continue;
+        await upsertBet({ id: existing?.id, profileId, matchId, pick });
       }
       setDrafts({});
       setMsg("Palpites salvos!");
@@ -331,9 +384,9 @@ function MyBets({ pool, matchesByStage, onSaved }) {
   return (
     <div className="mybets">
       <label className="who">
-        Quem é você?{" "}
+        Quem está palpitando?{" "}
         <select value={profileId} onChange={(e) => setProfileId(e.target.value)}>
-          <option value="">— escolha seu nome —</option>
+          <option value="">— selecionar participante —</option>
           {[...pool.profiles]
             .sort((a, b) => a.displayName.localeCompare(b.displayName))
             .map((p) => (
@@ -349,61 +402,52 @@ function MyBets({ pool, matchesByStage, onSaved }) {
         <div className="join-row">
           <input
             type="text"
-            placeholder="Seu nome"
+            placeholder="Nome / apelido"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && joinAsNew()}
           />
+          <input
+            type="text"
+            inputMode="numeric"
+            className="join-base"
+            placeholder="Pts grupos"
+            value={newBase}
+            onChange={(e) => setNewBase(e.target.value.replace(/[^0-9]/g, ""))}
+          />
           <button disabled={joining || !newName.trim()} onClick={joinAsNew}>
-            {joining ? "Entrando…" : `Entrar (+${NEWCOMER_BONUS} pts)`}
+            {joining ? "Entrando…" : "Entrar"}
           </button>
         </div>
         <span className="join-hint">
-          Quem entra agora começa com {NEWCOMER_BONUS} pts por ter perdido a fase de grupos.
+          Sem pontos de grupos? Deixe em branco — você começa com {BASE_FLOOR} (piso para quem
+          entra agora).
         </span>
       </div>
 
-      {msg && !profileId && <p className="msg">{msg}</p>}
+      {msg && <p className="msg">{msg}</p>}
 
-      {!profileId && <p className="muted">Selecione seu nome para palpitar.</p>}
+      {!profileId && <p className="muted">Selecione ou crie um participante para palpitar.</p>}
 
       {profileId && !openMatches.length && (
         <p className="muted">Nenhum jogo aberto para palpite no momento.</p>
       )}
 
       {profileId &&
-        openMatches.map((m) => {
-          const existing = myBets[m.id];
-          const d = drafts[m.id] ?? {};
-          return (
-            <div className="bet-row" key={m.id}>
-              <span className="stage-tag">{STAGE_LABEL[m.stage]}</span>
-              <span className="teams">
-                {teamLabel(m.homeTeam)} vs {teamLabel(m.awayTeam)}
-              </span>
-              <input
-                type="number"
-                min="0"
-                value={d.home ?? existing?.predHome ?? ""}
-                onChange={(e) => setDraft(m.id, "home", e.target.value)}
-              />
-              <span>–</span>
-              <input
-                type="number"
-                min="0"
-                value={d.away ?? existing?.predAway ?? ""}
-                onChange={(e) => setDraft(m.id, "away", e.target.value)}
-              />
-            </div>
-          );
-        })}
+        openMatches.map((m) => (
+          <PickRow
+            key={m.id}
+            match={m}
+            value={drafts[m.id] ?? myBets[m.id]?.pick ?? ""}
+            onPick={(v) => setPick(m.id, v)}
+          />
+        ))}
 
       {profileId && openMatches.length > 0 && (
         <div className="save-bar">
           <button disabled={saving} onClick={save}>
             {saving ? "Salvando…" : "Salvar palpites"}
           </button>
-          {msg && <span className="msg">{msg}</span>}
         </div>
       )}
     </div>

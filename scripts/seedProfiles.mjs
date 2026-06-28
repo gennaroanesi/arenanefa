@@ -1,5 +1,6 @@
-// Seeds the 16 pool participants into whatever backend amplify_outputs.json
-// points at. Idempotent: skips a name that already exists.
+// Seeds / updates the 16 pool participants with their group-stage base score
+// (stored in startingPoints). Idempotent: creates missing, updates existing.
+// Base is floored at 30 (everyone starts with at least 30).
 //
 //   node scripts/seedProfiles.mjs
 //
@@ -11,10 +12,13 @@ const outputs = JSON.parse(readFileSync(new URL("../amplify_outputs.json", impor
 Amplify.configure(outputs);
 const client = generateClient();
 
-const NAMES = [
-  "Diego Goulart", "Bruno Viana", "Reginato", "Seiki", "Xinnh01", "João",
-  "Atarão", "Anesi", "Christian", "Douglas Flores", "Sena", "Thallis",
-  "Tatu", "Fábio S. B.", "Professor Mezzalira", "Rasche",
+const FLOOR = 30;
+// [displayName, group-stage total]
+const SEED = [
+  ["Thallis", 46], ["Xinnh01", 43], ["Atarão", 42], ["Sena", 41],
+  ["Christian", 40], ["Douglas Flores", 40], ["Tatu", 40], ["Fábio S. B.", 40],
+  ["Reginato", 39], ["Bruno Viana", 38], ["Professor Mezzalira", 38], ["Rasche", 38],
+  ["Diego Goulart", 36], ["João", 36], ["Seiki", 29], ["Anesi", 28],
 ];
 
 async function listAll() {
@@ -29,15 +33,21 @@ async function listAll() {
   return out;
 }
 
-const existing = new Set((await listAll()).map((p) => p.displayName));
+const bySlug = new Map((await listAll()).map((p) => [p.displayName, p]));
 let created = 0;
-for (const displayName of NAMES) {
-  if (existing.has(displayName)) {
-    console.log(`skip (exists): ${displayName}`);
-    continue;
+let updated = 0;
+for (const [displayName, raw] of SEED) {
+  const startingPoints = Math.max(FLOOR, raw);
+  const found = bySlug.get(displayName);
+  const res = found
+    ? await client.models.Profile.update({ id: found.id, startingPoints })
+    : await client.models.Profile.create({ displayName, startingPoints });
+  if (res.errors?.length) {
+    console.error(`FAILED ${displayName}:`, res.errors.map((e) => e.message).join("; "));
+  } else {
+    if (found) updated++;
+    else created++;
+    console.log(`${found ? "updated" : "created"}: ${displayName} → ${startingPoints} pts`);
   }
-  const res = await client.models.Profile.create({ displayName });
-  if (res.errors?.length) console.error(`FAILED ${displayName}:`, res.errors.map((e) => e.message).join("; "));
-  else { created++; console.log(`created: ${displayName}`); }
 }
-console.log(`\nDone. created=${created} total names=${NAMES.length}`);
+console.log(`\nDone. created=${created} updated=${updated}`);
