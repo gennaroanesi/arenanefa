@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { loadPool, upsertBet } from "./api";
 import { scoreBet, SCORING } from "./scoring";
+import BracketView from "./BracketView";
 import "./copa2026.css";
 
 const STAGES = [
@@ -35,7 +36,7 @@ function teamLabel(t) {
 export default function Copa2026() {
   const [pool, setPool] = useState(null);
   const [error, setError] = useState(null);
-  const [tab, setTab] = useState("leaderboard"); // leaderboard | matches | mybets
+  const [tab, setTab] = useState("leaderboard"); // leaderboard | bracket | matches | mybets
 
   async function refresh() {
     setError(null);
@@ -112,6 +113,9 @@ export default function Copa2026() {
         <button className={tab === "leaderboard" ? "on" : ""} onClick={() => setTab("leaderboard")}>
           Classificação
         </button>
+        <button className={tab === "bracket" ? "on" : ""} onClick={() => setTab("bracket")}>
+          Chave
+        </button>
         <button className={tab === "matches" ? "on" : ""} onClick={() => setTab("matches")}>
           Jogos &amp; Palpites
         </button>
@@ -121,6 +125,7 @@ export default function Copa2026() {
       </nav>
 
       {tab === "leaderboard" && <Leaderboard standings={standings} />}
+      {tab === "bracket" && <BracketView matches={pool.matches} />}
       {tab === "matches" && (
         <Matches pool={pool} matchesByStage={matchesByStage} />
       )}
