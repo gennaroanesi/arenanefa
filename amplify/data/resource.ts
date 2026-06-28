@@ -21,6 +21,10 @@ const schema = a
       // Reserved for future name+PIN self-serve auth. Unused for now; never
       // expose this once it actually holds a hash.
       pinHash: a.string(),
+      // Head-start points. Newcomers who join for the knockouts (and so missed
+      // the group stage) get a handicap here; the seeded 16 stay at 0/null.
+      // Added to their total in the leaderboard. Null is treated as 0.
+      startingPoints: a.integer(),
       bets: a.hasMany("Bet", "profileId"),
     }),
 

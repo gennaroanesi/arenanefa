@@ -3,7 +3,8 @@
 //
 // Upsert by `slot`: creates missing matches, updates teams/kickoff/stage on
 // existing ones. So re-running after group results finalize backfills the TBD
-// teams — just edit MATCHES below and run again. Country names are PT-BR.
+// teams — just edit MATCHES below and run again. Teams are FIFA 3-letter codes
+// (the UI maps code → PT-BR name + flag via src/copa2026/teams.js).
 //
 //   node scripts/seedKnockout.mjs
 //
@@ -16,24 +17,25 @@ Amplify.configure(outputs);
 const client = generateClient();
 
 // slot, stage, kickoff (UTC ISO), home, away. null team = not yet determined.
+// Teams are FIFA 3-letter codes (see src/copa2026/teams.js).
 const MATCHES = [
   // ── Round of 32 (16-avos) ────────────────────────────────────
-  [73, "R32", "2026-06-28T19:00:00Z", "África do Sul", "Canadá"],
-  [74, "R32", "2026-06-29T20:30:00Z", "Alemanha", "Paraguai"],
-  [75, "R32", "2026-06-30T01:00:00Z", "Holanda", "Marrocos"],
-  [76, "R32", "2026-06-29T17:00:00Z", "Brasil", "Japão"],
-  [77, "R32", "2026-06-30T21:00:00Z", "França", "Suécia"],
-  [78, "R32", "2026-06-30T17:00:00Z", "Costa do Marfim", "Noruega"],
-  [79, "R32", "2026-07-01T01:00:00Z", "México", "Equador"],
-  [80, "R32", "2026-07-01T16:00:00Z", "Inglaterra", null], // v 3º Grupo I/K
-  [81, "R32", "2026-07-02T00:00:00Z", "Estados Unidos", "Bósnia e Herzegovina"],
-  [82, "R32", "2026-07-01T20:00:00Z", "Bélgica", null], // v 3º Grupo A/I/J
-  [83, "R32", "2026-07-02T23:00:00Z", null, "Croácia"], // 2º Grupo K v
-  [84, "R32", "2026-07-02T19:00:00Z", "Espanha", null], // v 2º Grupo J
-  [85, "R32", "2026-07-03T03:00:00Z", "Suíça", null], // v 3º Grupo G/J
-  [86, "R32", "2026-07-03T22:00:00Z", "Argentina", "Cabo Verde"],
-  [87, "R32", "2026-07-04T01:30:00Z", null, "Gana"], // 1º Grupo K v
-  [88, "R32", "2026-07-03T18:00:00Z", "Austrália", "Egito"],
+  [73, "R32", "2026-06-28T19:00:00Z", "RSA", "CAN"],
+  [74, "R32", "2026-06-29T20:30:00Z", "GER", "PAR"],
+  [75, "R32", "2026-06-30T01:00:00Z", "NED", "MAR"],
+  [76, "R32", "2026-06-29T17:00:00Z", "BRA", "JPN"],
+  [77, "R32", "2026-06-30T21:00:00Z", "FRA", "SWE"],
+  [78, "R32", "2026-06-30T17:00:00Z", "CIV", "NOR"],
+  [79, "R32", "2026-07-01T01:00:00Z", "MEX", "ECU"],
+  [80, "R32", "2026-07-01T16:00:00Z", "ENG", null], // v 3º Grupo I/K
+  [81, "R32", "2026-07-02T00:00:00Z", "USA", "BIH"],
+  [82, "R32", "2026-07-01T20:00:00Z", "BEL", null], // v 3º Grupo A/I/J
+  [83, "R32", "2026-07-02T23:00:00Z", null, "CRO"], // 2º Grupo K v
+  [84, "R32", "2026-07-02T19:00:00Z", "ESP", null], // v 2º Grupo J
+  [85, "R32", "2026-07-03T03:00:00Z", "SUI", null], // v 3º Grupo G/J
+  [86, "R32", "2026-07-03T22:00:00Z", "ARG", "CPV"],
+  [87, "R32", "2026-07-04T01:30:00Z", null, "GHA"], // 1º Grupo K v
+  [88, "R32", "2026-07-03T18:00:00Z", "AUS", "EGY"],
   // ── Round of 16 (teams TBD; fed by R32 winners) ──────────────
   [89, "R16", "2026-07-04T21:00:00Z", null, null],
   [90, "R16", "2026-07-04T17:00:00Z", null, null],

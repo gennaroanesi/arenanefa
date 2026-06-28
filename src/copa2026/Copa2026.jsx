@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { loadPool, upsertBet } from "./api";
-import { scoreBet, SCORING } from "./scoring";
+import { loadPool, upsertBet, createProfile } from "./api";
+import { scoreBet, SCORING, NEWCOMER_BONUS } from "./scoring";
+import { nameFor } from "./teams";
 import BracketView from "./BracketView";
 import "./copa2026.css";
 
@@ -29,8 +30,8 @@ function isOpen(match) {
   return true;
 }
 
-function teamLabel(t) {
-  return t && t.trim() ? t : "A definir";
+function teamLabel(code) {
+  return code && code.trim() ? nameFor(code) : "A definir";
 }
 
 export default function Copa2026() {
@@ -67,7 +68,10 @@ export default function Copa2026() {
   const standings = useMemo(() => {
     if (!pool) return [];
     const byProfile = Object.fromEntries(
-      pool.profiles.map((p) => [p.id, { profile: p, points: 0, big: 0, small: 0, played: 0 }]),
+      pool.profiles.map((p) => [
+        p.id,
+        { profile: p, points: p.startingPoints ?? 0, big: 0, small: 0, played: 0 },
+      ]),
     );
     for (const bet of pool.bets) {
       const row = byProfile[bet.profileId];
@@ -173,7 +177,14 @@ function Leaderboard({ standings }) {
         {standings.map((r, i) => (
           <tr key={r.profile.id}>
             <td>{i + 1}</td>
-            <td>{r.profile.displayName}</td>
+            <td>
+              {r.profile.displayName}
+              {r.profile.startingPoints > 0 && (
+                <span className="novato" title={`Novato · começou com ${r.profile.startingPoints} pts`}>
+                  +{r.profile.startingPoints}
+                </span>
+              )}
+            </td>
             <td className="pts">{r.points}</td>
             <td>{r.big}</td>
             <td>{r.small}</td>
@@ -249,6 +260,33 @@ function MyBets({ pool, matchesByStage, onSaved }) {
   const [drafts, setDrafts] = useState({}); // matchId -> {home, away}
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [newName, setNewName] = useState("");
+  const [joining, setJoining] = useState(false);
+
+  async function joinAsNew() {
+    const name = newName.trim();
+    if (!name) return;
+    const taken = pool.profiles.some(
+      (p) => p.displayName.toLowerCase() === name.toLowerCase(),
+    );
+    if (taken) {
+      setMsg("Esse nome já existe — selecione-o na lista.");
+      return;
+    }
+    setJoining(true);
+    setMsg(null);
+    try {
+      const created = await createProfile(name, NEWCOMER_BONUS);
+      await onSaved(); // reload pool so the new profile shows up
+      setProfileId(created.id);
+      setNewName("");
+      setMsg(`Bem-vindo, ${name}! Você começa com ${NEWCOMER_BONUS} pts.`);
+    } catch (e) {
+      setMsg("Erro: " + (e.message ?? String(e)));
+    } finally {
+      setJoining(false);
+    }
+  }
 
   const myBets = useMemo(() => {
     const map = {};
@@ -305,6 +343,27 @@ function MyBets({ pool, matchesByStage, onSaved }) {
             ))}
         </select>
       </label>
+
+      <div className="join-new">
+        <span className="join-or">ou entre como novo participante:</span>
+        <div className="join-row">
+          <input
+            type="text"
+            placeholder="Seu nome"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && joinAsNew()}
+          />
+          <button disabled={joining || !newName.trim()} onClick={joinAsNew}>
+            {joining ? "Entrando…" : `Entrar (+${NEWCOMER_BONUS} pts)`}
+          </button>
+        </div>
+        <span className="join-hint">
+          Quem entra agora começa com {NEWCOMER_BONUS} pts por ter perdido a fase de grupos.
+        </span>
+      </div>
+
+      {msg && !profileId && <p className="msg">{msg}</p>}
 
       {!profileId && <p className="muted">Selecione seu nome para palpitar.</p>}
 

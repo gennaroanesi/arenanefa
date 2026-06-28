@@ -144,6 +144,58 @@
   display: block;
   margin-bottom: 1rem;
 }
+.join-new {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+  padding: 0.85rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f9fafb;
+}
+.join-or {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+.join-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.join-row input {
+  flex: 1;
+  min-width: 0;
+}
+.join-row button {
+  background: #16a34a;
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.join-row button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.join-hint {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+.novato {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 0.68rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
 .mybets select,
 .mybets input {
   font-size: 1rem;

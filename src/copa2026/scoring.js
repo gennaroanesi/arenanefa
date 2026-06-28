@@ -8,6 +8,9 @@ export const SCORING = {
   knockout: { gd: 3, result: 1 },
 };
 
+// Head-start for newcomers who join for the knockouts (missed the group stage).
+export const NEWCOMER_BONUS = 30;
+
 const sign = (a, b) => (a > b ? 1 : a < b ? -1 : 0);
 
 const isGroup = (match) => match?.stage === "GROUP";

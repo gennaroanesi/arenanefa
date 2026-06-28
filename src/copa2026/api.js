@@ -21,6 +21,12 @@ export function loadPool() {
   ]).then(([profiles, matches, bets]) => ({ profiles, matches, bets }));
 }
 
+export async function createProfile(displayName, startingPoints = 0) {
+  const res = await client.models.Profile.create({ displayName, startingPoints });
+  if (res.errors?.length) throw new Error(res.errors.map((e) => e.message).join("; "));
+  return res.data;
+}
+
 export async function upsertBet({ id, profileId, matchId, predHome, predAway }) {
   const input = { profileId, matchId, predHome, predAway };
   const res = id

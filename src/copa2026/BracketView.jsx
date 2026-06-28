@@ -1,5 +1,5 @@
 import { FEEDS, LEFT, RIGHT, FINAL, THIRD, ROUND_LABELS } from "./bracket";
-import { flagFor } from "./teams";
+import { flagFor, nameFor } from "./teams";
 
 const fmt = new Intl.DateTimeFormat("pt-BR", {
   timeZone: "America/Sao_Paulo",
@@ -24,12 +24,12 @@ function placeholder(slot, side /* "home" | "away" */) {
   return `Venc. M${feeder}`;
 }
 
-function TeamRow({ name, slot, side, score, win }) {
-  const known = !!name;
+function TeamRow({ code, slot, side, score, win }) {
+  const known = !!code;
   return (
     <div className={`brow ${win ? "win" : ""} ${known ? "" : "tbd"}`}>
-      <span className="flag">{flagFor(name)}</span>
-      <span className="bname">{known ? name : placeholder(slot, side)}</span>
+      <span className="flag">{flagFor(code)}</span>
+      <span className="bname">{known ? nameFor(code) : placeholder(slot, side)}</span>
       <span className="bscore">{score ?? ""}</span>
     </div>
   );
@@ -46,14 +46,14 @@ function MatchBox({ match, slot }) {
         <span>{whenLabel(match?.kickoff)}</span>
       </div>
       <TeamRow
-        name={match?.homeTeam}
+        code={match?.homeTeam}
         slot={slot}
         side="home"
         score={played ? match.homeScore : null}
         win={homeWin}
       />
       <TeamRow
-        name={match?.awayTeam}
+        code={match?.awayTeam}
         slot={slot}
         side="away"
         score={played ? match.awayScore : null}
