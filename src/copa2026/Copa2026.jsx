@@ -67,6 +67,20 @@ export default function Copa2026() {
     };
   }, []);
 
+  // Paint the navy onto the outermost elements while this page is mounted,
+  // so the background fills the whole viewport (not just the content column).
+  useEffect(() => {
+    const root = document.documentElement;
+    const { body } = document;
+    const prev = { html: root.style.background, body: body.style.background };
+    root.style.background = "#0a1330";
+    body.style.background = "#0a1330";
+    return () => {
+      root.style.background = prev.html;
+      body.style.background = prev.body;
+    };
+  }, []);
+
   const matchesById = useMemo(
     () => Object.fromEntries((pool?.matches ?? []).map((m) => [m.id, m])),
     [pool],
@@ -303,14 +317,27 @@ function PickRow({ match, value, onPick }) {
   );
 }
 
+const ME_KEY = "copa2026:me";
+
 function MyBets({ pool, matchesByStage, onSaved }) {
-  const [profileId, setProfileId] = useState("");
+  // Pre-select the remembered participant, but only if they still exist.
+  const [profileId, setProfileIdRaw] = useState(() => {
+    const saved = localStorage.getItem(ME_KEY);
+    return saved && pool.profiles.some((p) => p.id === saved) ? saved : "";
+  });
   const [drafts, setDrafts] = useState({}); // matchId -> pick string
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
   const [newName, setNewName] = useState("");
   const [newBase, setNewBase] = useState("");
   const [joining, setJoining] = useState(false);
+
+  // Persist who's betting so the tab pre-selects them next time.
+  function setProfileId(id) {
+    setProfileIdRaw(id);
+    if (id) localStorage.setItem(ME_KEY, id);
+    else localStorage.removeItem(ME_KEY);
+  }
 
   async function joinAsNew() {
     const name = newName.trim();
