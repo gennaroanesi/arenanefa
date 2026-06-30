@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { loadPool, upsertBet, createProfile } from "./api";
+import { loadPool, upsertBet, createProfile, updateResult } from "./api";
 import { scoreBet, CONDS, BASE_FLOOR } from "./scoring";
 import { nameFor, flagFor } from "./teams";
 import BracketView from "./BracketView";
@@ -150,6 +150,9 @@ export default function Copa2026() {
         <button className={tab === "mybets" ? "on" : ""} onClick={() => setTab("mybets")}>
           Meus Palpites
         </button>
+        <button className={tab === "results" ? "on" : ""} onClick={() => setTab("results")}>
+          Resultados
+        </button>
       </nav>
 
       {tab === "leaderboard" && <Leaderboard standings={standings} />}
@@ -159,6 +162,9 @@ export default function Copa2026() {
       )}
       {tab === "mybets" && (
         <MyBets pool={pool} matchesByStage={matchesByStage} onSaved={refresh} />
+      )}
+      {tab === "results" && (
+        <Results matchesByStage={matchesByStage} onSaved={refresh} />
       )}
     </Shell>
   );
@@ -477,6 +483,165 @@ function MyBets({ pool, matchesByStage, onSaved }) {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Resultados ────────────────────────────────────────────────────────────
+// Admin-ish (public) tab to record match scores. Saving a score marks the
+// match FINISHED and feeds the leaderboard; on a draw, pick who advanced.
+function ResultRow({ match, onSaved }) {
+  const [home, setHome] = useState(match.homeScore != null ? String(match.homeScore) : "");
+  const [away, setAway] = useState(match.awayScore != null ? String(match.awayScore) : "");
+  const [advancer, setAdvancer] = useState(match.advancer ?? "");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  const h = home === "" ? null : parseInt(home, 10);
+  const a = away === "" ? null : parseInt(away, 10);
+  const bothSet = h != null && a != null;
+  const isDraw = bothSet && h === a;
+  const needsAdvancer = isDraw && !advancer;
+  const saved = match.homeScore != null && match.awayScore != null;
+
+  async function save() {
+    if (!bothSet) {
+      setMsg("Informe os dois placares.");
+      return;
+    }
+    if (needsAdvancer) {
+      setMsg("Empate: escolha quem avançou.");
+      return;
+    }
+    setSaving(true);
+    setMsg(null);
+    try {
+      // Non-draw: advancer is the higher score. Draw: the chosen side.
+      const adv = isDraw ? advancer : h > a ? match.homeTeam : match.awayTeam;
+      await updateResult({ id: match.id, homeScore: h, awayScore: a, advancer: adv });
+      setMsg("Salvo!");
+      await onSaved();
+    } catch (e) {
+      setMsg("Erro: " + (e.message ?? String(e)));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function clear() {
+    setSaving(true);
+    setMsg(null);
+    try {
+      await updateResult({ id: match.id, homeScore: null, awayScore: null, advancer: null });
+      setHome("");
+      setAway("");
+      setAdvancer("");
+      setMsg("Resultado removido.");
+      await onSaved();
+    } catch (e) {
+      setMsg("Erro: " + (e.message ?? String(e)));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const onlyDigits = (v) => v.replace(/[^0-9]/g, "");
+
+  return (
+    <div className="res-match">
+      <div className="res-when">
+        {STAGE_LABEL[match.stage]}
+        {saved && <span className="res-done">Finalizado</span>}
+      </div>
+      <div className="res-score">
+        <div className="res-team">
+          <span>{flagFor(match.homeTeam)}</span>
+          <span className="res-name">{teamLabel(match.homeTeam)}</span>
+        </div>
+        <input
+          type="text"
+          inputMode="numeric"
+          className="res-num"
+          value={home}
+          onChange={(e) => setHome(onlyDigits(e.target.value))}
+        />
+        <span className="res-x">×</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          className="res-num"
+          value={away}
+          onChange={(e) => setAway(onlyDigits(e.target.value))}
+        />
+        <div className="res-team res-team-r">
+          <span className="res-name">{teamLabel(match.awayTeam)}</span>
+          <span>{flagFor(match.awayTeam)}</span>
+        </div>
+      </div>
+
+      {isDraw && (
+        <div className="res-adv">
+          <span className="res-adv-q">Quem avançou?</span>
+          <div className="res-adv-btns">
+            <button
+              type="button"
+              className={"pick-btn" + (advancer === match.homeTeam ? " on" : "")}
+              onClick={() => setAdvancer(match.homeTeam)}
+            >
+              {flagFor(match.homeTeam)} {match.homeTeam}
+            </button>
+            <button
+              type="button"
+              className={"pick-btn" + (advancer === match.awayTeam ? " on" : "")}
+              onClick={() => setAdvancer(match.awayTeam)}
+            >
+              {flagFor(match.awayTeam)} {match.awayTeam}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="res-actions">
+        <button className="res-save" disabled={saving} onClick={save}>
+          {saving ? "Salvando…" : saved ? "Atualizar" : "Salvar"}
+        </button>
+        {saved && (
+          <button className="res-clear" disabled={saving} onClick={clear}>
+            Limpar
+          </button>
+        )}
+        {msg && <span className="res-msg">{msg}</span>}
+      </div>
+    </div>
+  );
+}
+
+function Results({ matchesByStage, onSaved }) {
+  // Only matches whose teams are both known can be scored.
+  const playable = useMemo(
+    () =>
+      STAGES.map((s) => ({
+        ...s,
+        matches: (matchesByStage[s.key] ?? []).filter((m) => m.homeTeam && m.awayTeam),
+      })).filter((s) => s.matches.length),
+    [matchesByStage],
+  );
+
+  if (!playable.length) {
+    return <p className="muted">Nenhum jogo com times definidos para lançar resultado.</p>;
+  }
+
+  return (
+    <div className="results">
+      <p className="res-intro">Lance o placar final. Em empate, escolha quem avançou (pênaltis).</p>
+      {playable.map((s) => (
+        <section key={s.key}>
+          <h2>{s.label}</h2>
+          {s.matches.map((m) => (
+            <ResultRow key={m.id} match={m} onSaved={onSaved} />
+          ))}
+        </section>
+      ))}
     </div>
   );
 }

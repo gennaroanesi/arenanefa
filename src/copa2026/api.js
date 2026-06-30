@@ -34,3 +34,18 @@ export async function upsertBet({ id, profileId, matchId, pick }) {
   if (res.errors?.length) throw new Error(res.errors.map((e) => e.message).join("; "));
   return res.data;
 }
+
+// Record (or clear) a match result. Passing scores marks it FINISHED; passing
+// nulls reopens it. `advancer` only matters on a draw (penalty winner).
+export async function updateResult({ id, homeScore, awayScore, advancer }) {
+  const finished = homeScore != null && awayScore != null;
+  const res = await client.models.Match.update({
+    id,
+    homeScore,
+    awayScore,
+    advancer: advancer ?? null,
+    status: finished ? "FINISHED" : "SCHEDULED",
+  });
+  if (res.errors?.length) throw new Error(res.errors.map((e) => e.message).join("; "));
+  return res.data;
+}

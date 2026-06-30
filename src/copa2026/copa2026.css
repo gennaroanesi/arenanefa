@@ -375,6 +375,132 @@
   font-size: 0.9rem;
 }
 
+/* ── Resultados ── */
+.results {
+  margin-top: 1rem;
+}
+.results section {
+  margin-bottom: 1.5rem;
+}
+.results h2 {
+  font-size: 1.05rem;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 0.25rem;
+}
+.res-intro {
+  color: var(--dim);
+  font-size: 0.82rem;
+  margin: 0.25rem 0 1rem;
+}
+.res-match {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.75rem;
+  background: var(--card);
+}
+.res-when {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.res-done {
+  color: var(--green);
+  background: rgba(31, 204, 114, 0.16);
+  border-radius: 999px;
+  padding: 0 0.45rem;
+  font-size: 0.66rem;
+}
+.res-score {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto 1fr;
+  align-items: center;
+  gap: 0.4rem;
+}
+.res-team {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+.res-team-r {
+  justify-content: flex-end;
+}
+.res-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.res-num {
+  width: 2.6rem;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 0.45rem 0.3rem;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+.res-x {
+  color: var(--dim);
+  font-weight: 700;
+}
+.res-adv {
+  margin-top: 0.6rem;
+}
+.res-adv-q {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--dim);
+  margin-bottom: 0.3rem;
+}
+.res-adv-btns {
+  display: flex;
+  gap: 0.4rem;
+}
+.res-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+.res-save {
+  background: var(--accent);
+  color: #06122e;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.45rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.res-clear {
+  background: transparent;
+  color: var(--dim);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.res-save:disabled,
+.res-clear:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.res-msg {
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+
 /* ── Bracket (Chave) ── */
 .bracket-wrap {
   overflow-x: auto;
