@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { loadPool, upsertBet, createProfile } from "./api";
+import { loadPool, upsertBet, createProfile, updateMatch } from "./api";
 import { scoreBet, CONDS, BASE_FLOOR } from "./scoring";
+import { resolveBracketTeams } from "./bracket";
 import { nameFor, flagFor } from "./teams";
 import BracketView from "./BracketView";
 import "./copa2026.css";
@@ -150,6 +151,9 @@ export default function Copa2026() {
         <button className={tab === "mybets" ? "on" : ""} onClick={() => setTab("mybets")}>
           Meus Palpites
         </button>
+        <button className={tab === "results" ? "on" : ""} onClick={() => setTab("results")}>
+          Resultados
+        </button>
       </nav>
 
       {tab === "leaderboard" && <Leaderboard standings={standings} />}
@@ -159,6 +163,9 @@ export default function Copa2026() {
       )}
       {tab === "mybets" && (
         <MyBets pool={pool} matchesByStage={matchesByStage} onSaved={refresh} />
+      )}
+      {tab === "results" && (
+        <Results pool={pool} matchesByStage={matchesByStage} onSaved={refresh} />
       )}
     </Shell>
   );
@@ -477,6 +484,161 @@ function MyBets({ pool, matchesByStage, onSaved }) {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// One match's result entry: score inputs + (on a tie) a "who advanced" toggle.
+function ResultRow({ match, draft, onChange }) {
+  const known = !!match.homeTeam && !!match.awayTeam;
+  const eff = (field, fallback) => (draft?.[field] !== undefined ? draft[field] : fallback);
+  const home = eff("home", match.homeScore ?? "");
+  const away = eff("away", match.awayScore ?? "");
+  const adv = eff("adv", match.advancer ?? "");
+  const isDraw = home !== "" && away !== "" && Number(home) === Number(away);
+  return (
+    <div className="res-match">
+      <div className="res-when">
+        M{match.slot} · {teamLabel(match.homeTeam)} vs {teamLabel(match.awayTeam)}
+      </div>
+      {known ? (
+        <>
+          <div className="res-scores">
+            <span className="res-team">
+              <span>{flagFor(match.homeTeam)}</span>
+              <span className="res-name">{nameFor(match.homeTeam)}</span>
+            </span>
+            <input
+              className="res-input"
+              type="number"
+              min="0"
+              inputMode="numeric"
+              value={home}
+              onChange={(e) => onChange("home", e.target.value)}
+            />
+            <span className="res-x">×</span>
+            <input
+              className="res-input"
+              type="number"
+              min="0"
+              inputMode="numeric"
+              value={away}
+              onChange={(e) => onChange("away", e.target.value)}
+            />
+            <span className="res-team res-team-r">
+              <span className="res-name">{nameFor(match.awayTeam)}</span>
+              <span>{flagFor(match.awayTeam)}</span>
+            </span>
+          </div>
+          {isDraw && (
+            <div className="res-adv">
+              <span className="res-adv-q">Quem avançou (pênaltis)?</span>
+              <div className="res-adv-btns">
+                <button
+                  type="button"
+                  className={adv === match.homeTeam ? "on" : ""}
+                  onClick={() => onChange("adv", match.homeTeam)}
+                >
+                  {nameFor(match.homeTeam)}
+                </button>
+                <button
+                  type="button"
+                  className={adv === match.awayTeam ? "on" : ""}
+                  onClick={() => onChange("adv", match.awayTeam)}
+                >
+                  {nameFor(match.awayTeam)}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="res-tbd">Aguardando classificados das fases anteriores.</div>
+      )}
+    </div>
+  );
+}
+
+function Results({ pool, matchesByStage, onSaved }) {
+  const [drafts, setDrafts] = useState({}); // matchId -> {home, away, adv}
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  function setField(matchId, field, val) {
+    setDrafts((d) => ({ ...d, [matchId]: { ...d[matchId], [field]: val } }));
+  }
+
+  async function save() {
+    setSaving(true);
+    setMsg(null);
+    try {
+      // Work on a slot-keyed copy so we can auto-advance after applying edits.
+      const bySlot = Object.fromEntries(pool.matches.map((m) => [m.slot, { ...m }]));
+
+      for (const [matchId, d] of Object.entries(drafts)) {
+        const m = pool.matches.find((x) => x.id === matchId);
+        if (!m) continue;
+        const eff = (f, fb) => (d[f] !== undefined ? d[f] : fb);
+        const hRaw = eff("home", m.homeScore);
+        const aRaw = eff("away", m.awayScore);
+        const home = hRaw === "" || hRaw == null ? null : Number(hRaw);
+        const away = aRaw === "" || aRaw == null ? null : Number(aRaw);
+        const both = home != null && !Number.isNaN(home) && away != null && !Number.isNaN(away);
+        const advancer = both && home === away ? eff("adv", m.advancer) || m.homeTeam : null;
+        const input = {
+          id: m.id,
+          homeScore: both ? home : null,
+          awayScore: both ? away : null,
+          advancer,
+          status: both ? "FINISHED" : "SCHEDULED",
+        };
+        await updateMatch(input);
+        bySlot[m.slot] = { ...bySlot[m.slot], ...input };
+      }
+
+      // Auto-advance: push winners (and third-place losers) into fed matches.
+      const desired = resolveBracketTeams(bySlot);
+      for (const [slotStr, teams] of Object.entries(desired)) {
+        const m = pool.matches.find((x) => x.slot === Number(slotStr));
+        if (!m) continue;
+        const upd = { id: m.id };
+        if (teams.homeTeam && teams.homeTeam !== m.homeTeam) upd.homeTeam = teams.homeTeam;
+        if (teams.awayTeam && teams.awayTeam !== m.awayTeam) upd.awayTeam = teams.awayTeam;
+        if (Object.keys(upd).length > 1) await updateMatch(upd);
+      }
+
+      setDrafts({});
+      setMsg("Resultados salvos! Próximas fases atualizadas.");
+      await onSaved();
+    } catch (e) {
+      setMsg("Erro: " + (e.message ?? String(e)));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const sections = STAGES.filter((s) => matchesByStage[s.key]?.length);
+
+  return (
+    <div className="results">
+      <p className="res-note">
+        Lance o placar real de cada jogo. Em empate (decidido nos pênaltis), marque quem avançou. O
+        vencedor sobe automaticamente para a próxima fase.
+      </p>
+      {sections.map((s) => (
+        <section key={s.key} className="res-section">
+          <h2>{STAGE_LABEL[s.key]}</h2>
+          {matchesByStage[s.key].map((m) => (
+            <ResultRow key={m.id} match={m} draft={drafts[m.id]} onChange={(f, v) => setField(m.id, f, v)} />
+          ))}
+        </section>
+      ))}
+      <div className="save-bar">
+        <button disabled={saving} onClick={save}>
+          {saving ? "Salvando…" : "Salvar resultados"}
+        </button>
+        {msg && <span className="msg"> {msg}</span>}
+      </div>
     </div>
   );
 }

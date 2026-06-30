@@ -341,6 +341,112 @@
   font-weight: 900;
 }
 
+/* Resultados (admin) */
+.res-note {
+  font-size: 0.82rem;
+  color: var(--dim);
+  margin: 1rem 0;
+  padding: 0.7rem 0.85rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.res-section {
+  margin-bottom: 1.25rem;
+}
+.res-section h2 {
+  font-size: 1rem;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 0.2rem;
+}
+.res-match {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin: 0.5rem 0;
+  background: var(--card);
+  overflow: hidden;
+}
+.res-when {
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--accent);
+  background: var(--soft);
+  border-bottom: 1px solid var(--line);
+}
+.res-scores {
+  display: grid;
+  grid-template-columns: 1fr 3rem auto 3rem 1fr;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.6rem 0.7rem;
+}
+.res-team {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  min-width: 0;
+}
+.res-team-r {
+  justify-content: flex-end;
+}
+.res-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.res-input {
+  width: 3rem;
+  text-align: center;
+  font-size: 1rem;
+  padding: 0.35rem 0;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+.res-x {
+  color: var(--dim);
+  text-align: center;
+}
+.res-adv {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0 0.7rem 0.6rem;
+}
+.res-adv-q {
+  font-size: 0.74rem;
+  color: var(--dim);
+}
+.res-adv-btns {
+  display: flex;
+  gap: 0.4rem;
+}
+.res-adv-btns button {
+  border: 1.5px solid var(--line);
+  background: var(--soft);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.res-adv-btns button.on {
+  background: var(--green);
+  border-color: var(--green);
+  color: #06281a;
+}
+.res-tbd {
+  padding: 0.7rem;
+  font-size: 0.78rem;
+  color: var(--dim);
+}
+
 .save-bar {
   position: sticky;
   bottom: 12px;

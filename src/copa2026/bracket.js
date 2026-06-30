@@ -32,3 +32,32 @@ export const ROUND_LABELS = {
   qf: "Quartas",
   sf: "Semi",
 };
+
+// Winner / loser team code of a scored match (null if undecided).
+export function winnerOf(m) {
+  if (!m || m.homeScore == null || m.awayScore == null) return null;
+  if (m.homeScore > m.awayScore) return m.homeTeam;
+  if (m.awayScore > m.homeScore) return m.awayTeam;
+  return m.advancer || null; // tie → whoever advanced (penalties)
+}
+export function loserOf(m) {
+  const w = winnerOf(m);
+  if (!w) return null;
+  return w === m.homeTeam ? m.awayTeam : m.homeTeam;
+}
+
+// Given matches keyed by slot, compute the home/away teams each fed match
+// (R16 → final, + third place) should have, based on results so far.
+// Returns { slot: { homeTeam, awayTeam } } for fed slots only.
+export function resolveBracketTeams(bySlot) {
+  const out = {};
+  for (const [fedStr, [a, b]] of Object.entries(FEEDS)) {
+    const fed = Number(fedStr);
+    if (fed === THIRD) {
+      out[fed] = { homeTeam: loserOf(bySlot[a]), awayTeam: loserOf(bySlot[b]) };
+    } else {
+      out[fed] = { homeTeam: winnerOf(bySlot[a]), awayTeam: winnerOf(bySlot[b]) };
+    }
+  }
+  return out;
+}
