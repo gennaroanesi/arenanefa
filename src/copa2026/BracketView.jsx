@@ -1,4 +1,4 @@
-import { FEEDS, LEFT, RIGHT, FINAL, THIRD, ROUND_LABELS } from "./bracket";
+import { FEEDS, LEFT, RIGHT, FINAL, THIRD, ROUND_LABELS, winnerOf } from "./bracket";
 import { flagFor, nameFor } from "./teams";
 
 const fmt = new Intl.DateTimeFormat("pt-BR", {
@@ -38,9 +38,10 @@ function TeamRow({ code, slot, side, score, win }) {
 function MatchBox({ match, slot }) {
   const played = match?.homeScore != null && match?.awayScore != null;
   const live = match?.status === "LIVE";
-  const final = match?.status === "FINISHED";
-  const homeWin = final && match.homeScore > match.awayScore;
-  const awayWin = final && match.awayScore > match.homeScore;
+  // Winner = whoever advanced (higher score, or the advancer on a penalty tie).
+  const winner = winnerOf(match);
+  const homeWin = !!winner && winner === match?.homeTeam;
+  const awayWin = !!winner && winner === match?.awayTeam;
   return (
     <div className="bbox">
       <div className="bwhen">
