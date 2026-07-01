@@ -614,6 +614,10 @@
   --bline: #2c4480;
   --cw: 28px;
   --hh: 28px;
+  /* Cards are centered in their slots, but each has a header row on top, so a
+     card's geometric center sits above its two-team matchup center by half the
+     header height. Nudge the connectors down by that much to hit the matchup. */
+  --yshift: 14px;
 }
 .bracket-hint {
   display: none;
@@ -733,7 +737,7 @@
 .conn-slot .bus {
   position: absolute;
   left: 50%;
-  top: 25%;
+  top: calc(25% + var(--yshift));
   height: 50%;
   border-left: 2px solid var(--bline);
 }
@@ -744,15 +748,15 @@
 }
 .conn-slot .arm-tl {
   left: 0;
-  top: 25%;
+  top: calc(25% + var(--yshift));
 }
 .conn-slot .arm-bl {
   left: 0;
-  top: 75%;
+  top: calc(75% + var(--yshift));
 }
 .conn-slot .arm-r {
   left: 50%;
-  top: 50%;
+  top: calc(50% + var(--yshift));
 }
 .bcenter {
   display: flex;
