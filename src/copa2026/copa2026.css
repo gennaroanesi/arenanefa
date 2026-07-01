@@ -618,6 +618,10 @@
      card's geometric center sits above its two-team matchup center by half the
      header height. Nudge the connectors down by that much to hit the matchup. */
   --yshift: 14px;
+  /* Per-match row height. MUST be ≥ a card's height, or the 16-team R32 column
+     overflows and the connectors drift down the column. The bracket height is
+     derived from this so every column distributes over the same space. */
+  --match-h: 112px;
 }
 .bracket-hint {
   display: none;
@@ -629,7 +633,8 @@
 .bracket {
   display: flex;
   align-items: stretch;
-  height: 760px;
+  /* 8 R32 matches per half drive the height; other rounds distribute over it. */
+  height: calc(8 * var(--match-h) + var(--hh));
   min-width: 1500px;
 }
 .half {
@@ -790,8 +795,10 @@
   .bracket-hint {
     display: block;
   }
+  .bracket-wrap {
+    --match-h: 104px; /* cards are a touch shorter at this font size */
+  }
   .bracket {
-    height: 680px;
     min-width: 1320px;
   }
   .bround {
