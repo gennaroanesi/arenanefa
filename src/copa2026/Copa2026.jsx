@@ -188,10 +188,44 @@ function Shell({ children }) {
   );
 }
 
+function initials(name) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.trim().slice(0, 2).toUpperCase();
+}
+
+function PodiumSpot({ rank, row }) {
+  return (
+    <div className={`pod-spot pod-${rank}`}>
+      <div className="pod-av">{initials(row.profile.displayName)}</div>
+      <div className="pod-name">{row.profile.displayName}</div>
+      <div className="pod-ped">
+        <div className="pod-rank">{rank}</div>
+        <div className="pod-pts">{row.points} pts</div>
+      </div>
+    </div>
+  );
+}
+
+// Top-3 podium: 1st centered and tallest, 2nd left, 3rd right.
+function Podium({ standings }) {
+  if (standings.length < 3) return null;
+  const [first, second, third] = standings;
+  return (
+    <div className="podium">
+      <PodiumSpot rank={2} row={second} />
+      <PodiumSpot rank={1} row={first} />
+      <PodiumSpot rank={3} row={third} />
+    </div>
+  );
+}
+
 function Leaderboard({ standings }) {
   if (!standings.length) return <p>Nenhum participante ainda.</p>;
   return (
-    <table className="board">
+    <>
+      <Podium standings={standings} />
+      <table className="board">
       <thead>
         <tr>
           <th>#</th>
@@ -219,7 +253,8 @@ function Leaderboard({ standings }) {
           </tr>
         ))}
       </tbody>
-    </table>
+      </table>
+    </>
   );
 }
 
