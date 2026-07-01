@@ -292,6 +292,11 @@ function MatchCard({ match, bets, profilesById }) {
           {teamLabel(match.homeTeam)} <em>vs</em> {teamLabel(match.awayTeam)}
         </span>
         <span className="score">
+          {match.status === "LIVE" && (
+            <span className="live-chip">
+              <span className="live-dot" /> AO VIVO
+            </span>
+          )}{" "}
           {played ? `${match.homeScore} – ${match.awayScore}` : isOpen(match) ? "aberto" : "—"}
         </span>
         <span className="count">{bets.length} palpites</span>

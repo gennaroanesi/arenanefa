@@ -33,9 +33,10 @@ export const ROUND_LABELS = {
   sf: "Semi",
 };
 
-// Winner / loser team code of a scored match (null if undecided).
+// Winner / loser team code of a FINISHED match (null if not final yet, so
+// live in-progress scores never advance the bracket or resolve a winner).
 export function winnerOf(m) {
-  if (!m || m.homeScore == null || m.awayScore == null) return null;
+  if (!m || m.status !== "FINISHED" || m.homeScore == null || m.awayScore == null) return null;
   if (m.homeScore > m.awayScore) return m.homeTeam;
   if (m.awayScore > m.homeScore) return m.awayTeam;
   return m.advancer || null; // tie → whoever advanced (penalties)

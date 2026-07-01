@@ -48,6 +48,7 @@ export function resultPick(match) {
  * @returns number of points, or null if the match hasn't been scored yet.
  */
 export function scoreBet(bet, match) {
+  if (match?.status !== "FINISHED") return null; // don't score live/scheduled
   const res = resultPick(match);
   if (res == null) return null; // not decided yet
   if (!bet?.pick) return 0;

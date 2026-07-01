@@ -37,13 +37,21 @@ function TeamRow({ code, slot, side, score, win }) {
 
 function MatchBox({ match, slot }) {
   const played = match?.homeScore != null && match?.awayScore != null;
-  const homeWin = played && match.homeScore > match.awayScore;
-  const awayWin = played && match.awayScore > match.homeScore;
+  const live = match?.status === "LIVE";
+  const final = match?.status === "FINISHED";
+  const homeWin = final && match.homeScore > match.awayScore;
+  const awayWin = final && match.awayScore > match.homeScore;
   return (
     <div className="bbox">
       <div className="bwhen">
         <span className="mno">M{slot}</span>
-        <span>{whenLabel(match?.kickoff)}</span>
+        {live ? (
+          <span className="live-chip">
+            <span className="live-dot" /> AO VIVO
+          </span>
+        ) : (
+          <span>{whenLabel(match?.kickoff)}</span>
+        )}
       </div>
       <TeamRow
         code={match?.homeTeam}

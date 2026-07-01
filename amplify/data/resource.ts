@@ -1,4 +1,5 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
+import { resultsPoller } from "../functions/results-poller/resource";
 
 /**
  * Copa 2026 betting pool — data model.
@@ -46,7 +47,7 @@ const schema = a
       awayScore: a.integer(),
       // For knockouts: which team advanced (resolves draws / shootouts).
       advancer: a.string(),
-      status: a.enum(["SCHEDULED", "FINISHED"]),
+      status: a.enum(["SCHEDULED", "LIVE", "FINISHED"]),
       bets: a.hasMany("Bet", "matchId"),
     }),
 
@@ -67,7 +68,7 @@ const schema = a
       match: a.belongsTo("Match", "matchId"),
     }),
   })
-  .authorization((allow) => [allow.publicApiKey()]);
+  .authorization((allow) => [allow.publicApiKey(), allow.resource(resultsPoller)]);
 
 export type Schema = ClientSchema<typeof schema>;
 
